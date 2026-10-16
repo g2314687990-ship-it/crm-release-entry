@@ -3,9 +3,10 @@ param([Parameter(Mandatory=$true)][ValidateSet('CheckoutTools','CheckoutCandidat
 # Public generic bootstrap. Raw private output never reaches Actions logs.
 Set-StrictMode -Version 2.0
 $ErrorActionPreference='Stop'
+$privateExit=0
 $secretLog="D:\CodexState\private-entry-logs\$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
 try {
- if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-ab358-v1' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
+ if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-ab358-v2' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
  New-Item -ItemType Directory -Path $secretLog -Force | Out-Null
  $controller=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
  & "$env:SystemRoot\System32\icacls.exe" $secretLog '/inheritance:r' '/grant:r' "*$($controller):(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' *> $null
@@ -42,6 +43,7 @@ try {
    } else {
      $hostExe=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
      & $hostExe -NoLogo -NoProfile -NonInteractive -File (Join-Path $env:GITHUB_WORKSPACE 'tools/scripts/public-release-step.ps1') -Mode $Mode -EvidenceSha $EvidenceSha -PlanPath $PlanPath
+     $script:privateExit=$LASTEXITCODE
      if($LASTEXITCODE -ne 0) { throw 'STEP' }
    }
  } *> $log
@@ -49,6 +51,9 @@ try {
  Write-Output 'REVIEWED_ENTRY_STEP=PASS'
 } catch {
  # Do not format ErrorRecord/exception: it may contain private source or data.
+ if($Mode -ceq 'SealLogs') {
+   switch($privateExit) { 41 { Write-Output 'DIAGNOSTIC_FAILURE_STAGE=ARCHIVE' } 42 { Write-Output 'DIAGNOSTIC_FAILURE_STAGE=ENCRYPT' } 43 { Write-Output 'DIAGNOSTIC_FAILURE_STAGE=BUDGET' } }
+ }
  Write-Output 'REVIEWED_ENTRY_STEP=FAIL'
  exit 1
 }
