@@ -1,0 +1,14 @@
+name: Environment must reject unapproved ref
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  must-not-start:
+    name: unapproved-ref-must-not-receive-environment
+    if: github.ref != 'refs/tags/release-entry-ab358-v1'
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 1
+    steps:
+      - shell: pwsh
+        run: throw 'SECURITY_FAILURE_UNAPPROVED_REF_WAS_ALLOWED_TO_START'
