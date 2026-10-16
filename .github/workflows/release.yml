@@ -1,0 +1,276 @@
+name: Reviewed private release on free hosted Windows
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [proof, release]
+        default: proof
+        required: true
+      evidence_sha:
+        description: Approved private evidence commit SHA (release only)
+        type: string
+        required: false
+      plan_path:
+        description: Relative approved plan path (release only)
+        type: string
+        required: false
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+concurrency:
+  group: locked-release-entry-ab358
+  cancel-in-progress: false
+env:
+  CANDIDATE_SHA: ab358f9533c5f991eea6d7572c9356d13eee3f61
+jobs:
+  preflight:
+    name: trusted-release-preflight
+    if: github.ref == 'refs/tags/release-entry-ab358-v1'
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Checkout locked candidate objects
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutCandidate
+      - name: Verify reviewed entry and real candidate negatives
+        shell: pwsh
+        run: ./entry/bootstrap.ps1 -Mode Preflight
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+  identity:
+    name: runtime-identity-proof
+    if: github.ref == 'refs/tags/release-entry-ab358-v1'
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Prove low identity and private data boundary
+        shell: pwsh
+        run: ./entry/bootstrap.ps1 -Mode Identity
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+  build-origin:
+    name: approved-build-import
+    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    needs: [preflight, identity]
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Verify immutable approved build origin
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+          ENTRY_PLATFORM_TOKEN: ${{ github.token }}
+          CRM_RELEASE_TRANSPORT_KEY: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+        run: ./entry/bootstrap.ps1 -Mode Import
+      - name: Upload encrypted build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crm-build-ab358f9533c5f991eea6d7572c9356d13eee3f61-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/build-cipher/payload.enc
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+  trusted-tools:
+    name: trusted-tools
+    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    needs: [build-origin]
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 25
+    outputs:
+      staged_artifact_id: ${{ steps.staged.outputs.artifact-id }}
+      staged_artifact_digest: ${{ steps.staged.outputs.artifact-digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Install approved tool dependencies
+        shell: pwsh
+        run: ./entry/bootstrap.ps1 -Mode Install
+      - name: Checkout locked candidate
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutCandidate
+      - name: Checkout reviewed evidence
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+          EVIDENCE_SHA: ${{ inputs.evidence_sha }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutEvidence -EvidenceSha $env:EVIDENCE_SHA
+      - name: Package with canonical Gate
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+          ENTRY_PLATFORM_TOKEN: ${{ github.token }}
+          CRM_RELEASE_TRANSPORT_KEY: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+          EVIDENCE_SHA: ${{ inputs.evidence_sha }}
+          PLAN_PATH: ${{ inputs.plan_path }}
+        run: ./entry/bootstrap.ps1 -Mode Package -EvidenceSha $env:EVIDENCE_SHA -PlanPath $env:PLAN_PATH
+      - name: Upload encrypted staged ZIP
+        id: staged
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crm-staged-ab358f9533c5f991eea6d7572c9356d13eee3f61-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/staged-cipher/payload.enc
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+  isolated-runtime:
+    name: isolated-runtime
+    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    needs: [trusted-tools]
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 18
+    env:
+      EXPECTED_STAGED_ARTIFACT_ID: ${{ needs.trusted-tools.outputs.staged_artifact_id }}
+      EXPECTED_STAGED_ARTIFACT_DIGEST: ${{ needs.trusted-tools.outputs.staged_artifact_digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Checkout locked runtime inventory
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutSource
+      - name: Download platform-bound staged ZIP
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+          ENTRY_PLATFORM_TOKEN: ${{ github.token }}
+          CRM_RELEASE_TRANSPORT_KEY: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+        run: ./entry/bootstrap.ps1 -Mode DownloadRuntime
+      - name: Verify extracted Next runtime
+        shell: pwsh
+        run: ./entry/bootstrap.ps1 -Mode Runtime
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+  final-acceptance:
+    name: final-acceptance
+    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    needs: [trusted-tools, isolated-runtime]
+    environment: trusted-entry-ab358
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_STAGED_ARTIFACT_ID: ${{ needs.trusted-tools.outputs.staged_artifact_id }}
+      EXPECTED_STAGED_ARTIFACT_DIGEST: ${{ needs.trusted-tools.outputs.staged_artifact_digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: entry
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.15.0'
+      - name: Checkout exact tools
+        shell: pwsh
+        env:
+          CRM_READ_TOKEN: ${{ secrets.CRM_READ_TOKEN }}
+        run: ./entry/bootstrap.ps1 -Mode CheckoutTools
+      - name: Accept same immutable ZIP independently
+        shell: pwsh
+        env:
+          ENTRY_PLATFORM_TOKEN: ${{ github.token }}
+          CRM_RELEASE_TRANSPORT_KEY: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
+        run: ./entry/bootstrap.ps1 -Mode Accept
+      - name: Publish bounded identity receipt only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crm-final-acceptance-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/PUBLIC-ACCEPTANCE.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve encrypted diagnostics
+        if: always()
+        uses: ./entry/.github/actions/seal-logs
+        with:
+          transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}

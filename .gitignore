@@ -1,0 +1,12 @@
+# Deny accidental private source/log/archive publication by default.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/SECURITY.md
+!/bootstrap.ps1
+!/release-lock.json
+!/.github/
+/.github/*
+!/.github/workflows/
+!/.github/actions/

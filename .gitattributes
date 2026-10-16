@@ -1,0 +1,2 @@
+# Lock identity checks compare the actual file with its reviewed Git blob.
+* text eol=lf
