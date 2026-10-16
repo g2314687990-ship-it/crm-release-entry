@@ -9,6 +9,7 @@ runs:
   steps:
     - shell: pwsh
       env:
+        ENTRY_PLATFORM_TOKEN: ${{ github.token }}
         CRM_RELEASE_TRANSPORT_KEY: ${{ inputs.transport_key }}
       run: ./entry/bootstrap.ps1 -Mode SealLogs
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
