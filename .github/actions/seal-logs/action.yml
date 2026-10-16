@@ -1,0 +1,21 @@
+name: Preserve diagnostics confidentially
+description: Upload authenticated ciphertext only; never upload raw logs
+inputs:
+  transport_key:
+    required: true
+    description: Environment-protected transport key
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      env:
+        ENTRY_PLATFORM_TOKEN: ${{ github.token }}
+        CRM_RELEASE_TRANSPORT_KEY: ${{ inputs.transport_key }}
+      run: ./entry/bootstrap.ps1 -Mode SealLogs
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: crm-private-proof-${{ github.job }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/private-log-cipher/payload.enc
+        compression-level: 0
+        if-no-files-found: error
+        retention-days: 1
