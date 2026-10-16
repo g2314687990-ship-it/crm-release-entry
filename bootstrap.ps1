@@ -6,7 +6,7 @@ $ErrorActionPreference='Stop'
 $privateExit=0
 $secretLog="D:\CodexState\private-entry-logs\$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
 try {
- if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-ab358-v2' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
+ if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-ab358-v3' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
  New-Item -ItemType Directory -Path $secretLog -Force | Out-Null
  $controller=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
  & "$env:SystemRoot\System32\icacls.exe" $secretLog '/inheritance:r' '/grant:r' "*$($controller):(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' *> $null
