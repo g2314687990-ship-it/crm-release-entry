@@ -1,0 +1,24 @@
+name: Free standard Windows runner proof
+on:
+  push:
+    paths:
+      - .github/workflows/free-runner-smoke.yml
+  workflow_dispatch:
+permissions: {}
+jobs:
+  smoke:
+    name: credential-free-windows-smoke
+    runs-on: windows-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify standard hosted Windows without private inputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'STANDARD_WINDOWS_HOST_REQUIRED' }
+          if ($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry') { throw 'ENTRY_REPOSITORY_MISMATCH' }
+          if (-not (Test-Path -LiteralPath 'D:\' -PathType Container)) { throw 'D_DRIVE_REQUIRED' }
+          'FREE_RUNNER_SMOKE=PASS'
+          'PRIVATE_INPUTS=NONE'
+          'RELEASE_GATE=NOT_RUN'
+          'SAFE_TO_DEPLOY=NO'
