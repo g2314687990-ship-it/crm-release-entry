@@ -58,7 +58,7 @@ jobs:
         uses: ./entry/.github/actions/seal-logs
         with:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
-  identity:
+  runtime-identity-proof:
     name: runtime-identity-proof
     if: github.ref == 'refs/tags/release-entry-ab358-v1'
     environment: trusted-entry-ab358
@@ -89,7 +89,7 @@ jobs:
   build-origin:
     name: approved-build-import
     if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
-    needs: [preflight, identity]
+    needs: [preflight, runtime-identity-proof]
     environment: trusted-entry-ab358
     runs-on: windows-latest
     timeout-minutes: 12
