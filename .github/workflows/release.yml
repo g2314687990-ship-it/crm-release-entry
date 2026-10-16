@@ -27,7 +27,7 @@ env:
 jobs:
   preflight:
     name: trusted-release-preflight
-    if: github.ref == 'refs/tags/release-entry-ab358-v1'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2'
     environment: trusted-entry-ab358
     runs-on: windows-latest
     timeout-minutes: 15
@@ -60,7 +60,7 @@ jobs:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
   runtime-identity-proof:
     name: runtime-identity-proof
-    if: github.ref == 'refs/tags/release-entry-ab358-v1'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2'
     environment: trusted-entry-ab358
     runs-on: windows-latest
     timeout-minutes: 12
@@ -88,7 +88,7 @@ jobs:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
   build-origin:
     name: approved-build-import
-    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2' && inputs.operation == 'release'
     needs: [preflight, runtime-identity-proof]
     environment: trusted-entry-ab358
     runs-on: windows-latest
@@ -129,7 +129,7 @@ jobs:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
   trusted-tools:
     name: trusted-tools
-    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2' && inputs.operation == 'release'
     needs: [build-origin]
     environment: trusted-entry-ab358
     runs-on: windows-latest
@@ -190,7 +190,7 @@ jobs:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
   isolated-runtime:
     name: isolated-runtime
-    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2' && inputs.operation == 'release'
     needs: [trusted-tools]
     environment: trusted-entry-ab358
     runs-on: windows-latest
@@ -234,7 +234,7 @@ jobs:
           transport_key: ${{ secrets.CRM_RELEASE_TRANSPORT_KEY }}
   final-acceptance:
     name: final-acceptance
-    if: github.ref == 'refs/tags/release-entry-ab358-v1' && inputs.operation == 'release'
+    if: github.ref == 'refs/tags/release-entry-ab358-v2' && inputs.operation == 'release'
     needs: [trusted-tools, isolated-runtime]
     environment: trusted-entry-ab358
     runs-on: windows-latest
