@@ -6,7 +6,7 @@ $ErrorActionPreference='Stop'
 $privateExit=0
 $secretLog="D:\CodexState\private-entry-logs\$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
 try {
- if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-ab358-v3' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
+ if($env:GITHUB_REPOSITORY -cne 'g2314687990-ship-it/crm-release-entry' -or $env:GITHUB_REF -cne 'refs/tags/release-entry-d6c68313-v4' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted' -or $env:RUNNER_OS -cne 'Windows') { throw 'HOST' }
  New-Item -ItemType Directory -Path $secretLog -Force | Out-Null
  $controller=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
  & "$env:SystemRoot\System32\icacls.exe" $secretLog '/inheritance:r' '/grant:r' "*$($controller):(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' *> $null
@@ -15,7 +15,7 @@ try {
  & {
    $entry=Join-Path $env:GITHUB_WORKSPACE 'entry'
    $lock=Get-Content -LiteralPath (Join-Path $entry 'release-lock.json') -Raw | ConvertFrom-Json
-   if($lock.version -ne 1 -or $lock.toolSha -cnotmatch '^[a-f0-9]{40}$' -or $lock.candidateSha -cne 'ab358f9533c5f991eea6d7572c9356d13eee3f61' -or $lock.sourceBaselineSha -cne $lock.candidateSha) { throw 'LOCK' }
+   if($lock.version -ne 1 -or $lock.toolSha -cnotmatch '^[a-f0-9]{40}$' -or $lock.candidateSha -cne 'd6c683130feddcaee915f2d9bde1f6520400b1a3' -or $lock.sourceBaselineSha -cne $lock.candidateSha) { throw 'LOCK' }
    if($Mode.StartsWith('Checkout')) {
      if(-not $env:CRM_READ_TOKEN) { throw 'READ_TOKEN' }
      switch($Mode) {

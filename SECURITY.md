@@ -8,7 +8,7 @@ Only standard GitHub-hosted runners are permitted. No self-hosted runner is regi
 
 Private access must remain disabled until the exact bootstrap and tool commits
 are independently reviewed. Environment `trusted-entry-ab358` allows only tag
-`release-entry-ab358-v3`; the active tag ruleset must deny updates and deletion
+`release-entry-d6c68313-v4`; the active tag ruleset must deny updates and deletion
 with no bypass actors. Verify the real environment rejection of unapproved refs
 before adding any secret. The tag must resolve to the approved bootstrap commit.
 
